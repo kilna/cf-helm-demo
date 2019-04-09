@@ -50,7 +50,7 @@ if ! [[ -e "$pem_file" ]]; then
 fi
 
 eval $(ssh-agent)
-cat "$pem_file" | ssh-add - # Avoids perms issues on keyfils
+cat "$pem_file" | ssh-add - # Avoids perms issues on keyfile
 
 tmpdir=$(mktemp -d)
 echo "Writing to $tmpdir"
