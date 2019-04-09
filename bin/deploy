@@ -12,7 +12,12 @@ usage() {
 USAGE: $0 [--profile=PROFILE] [--action=ACTION]
 
 PROFILE must match a YAML file in values/ - defaults to "demo"
-ACTION is a cloudformation action - valid values are "create" and ""
+ACTION is a cloudformation action - valid values are "create" and "delete"
+       default is "create"
+
+--help  : shows this message
+--debug : enables trace logging
+
 EOF
   exit "${2:-1}"
 }
