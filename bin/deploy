@@ -1,0 +1,16 @@
+#!/bin/bash
+
+set -e -u -o pipefail
+
+cd "$( dirname "${BASH_SOURCE[0]}" )/.."
+
+pem="$(yq -c -r -M .key_name).pem"
+
+if ! [[ -f "$pem" ]]; then echo "Unable to find pem file $pem"; exit 1; fi
+
+eval $(ssh-agent)
+ssh-add "$pem"
+
+if [[ "${1:-}" == '' ]]; then echo "USAGE: $0 <deployment profile>"; exit 1; fi
+
+helm tempalte -f ""
