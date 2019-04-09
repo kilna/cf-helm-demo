@@ -1,12 +1,15 @@
 #!/bin/bash
 
+# Set fail-on-error, fail-on-unset-variable and fail-inside-piped-commands
 set -e -u -o pipefail
 
+# Change dirs to the root of the project (one dir up from bin/)
 cd "$( dirname "${BASH_SOURCE[0]}" )/.."
 
-which yq > /dev/null # Check if yq is in PATH
+which yq > /dev/null # Check if yq is in PATH, fail if not
 
 usage() {
+  # Show an error message if provided
   [[ "${1:-}" != '' ]] && echo "$@"
   cat <<EOF
 USAGE: $0 [--profile=PROFILE] [--action=ACTION]
@@ -19,6 +22,7 @@ ACTION is a cloudformation action - valid values are "create" and "delete"
 --debug : enables trace logging
 
 EOF
+  # Exit with a specific error code if provided, otherwise exit 1
   exit "${2:-1}"
 }
 
@@ -29,6 +33,7 @@ opt() {
   elif [[ "$1" == *'='* ]]; then echo "${1#*=}"; else echo "$2"; return 1; fi
 }
 
+# Process command line params
 profile='demo'
 action='create'
 while [[ $# -gt 0 ]]; do case "$1" in
@@ -39,19 +44,23 @@ while [[ $# -gt 0 ]]; do case "$1" in
   *)              usage "Unknown option $1" 1;;
 esac; shift; done
 
+# Look for the values yaml specific to this profile
 values_yaml="$(pwd)/values/$profile.yaml"
 if ! [[ -e "$values_yaml" ]]; then
   usage "Unable to find values file $values_yaml for profile $profile" 2
 fi
 
+# Look for a pem file with the same name as the key_name
 pem_file="$(yq -c -r -M .key_name $values_yaml).pem"
 if ! [[ -e "$pem_file" ]]; then
   usage "Unable to find pem file $(pwd)/$pem_file" 3
 fi
 
+# Load the pem file into ssh-agent
 eval $(ssh-agent)
 cat "$pem_file" | ssh-add - # Avoids perms issues on keyfile
 
+# Create a temp dir
 tmpdir=$(mktemp -d)
 echo "Writing to $tmpdir"
 
@@ -59,7 +68,6 @@ echo "Writing to $tmpdir"
 helm template -f "$values_yaml" --output-dir "$tmpdir" chart/
 
 template="$tmpdir/cloudformation-helm-demo/templates/ec2_cf.yaml"
-
 cat "$template"
 
 aws cloudformation validate-template --template-body "$template"
