@@ -16,12 +16,12 @@ Cloudformation using Helm as the templating backend.
 ### Deployment
 
 ```
-$ bin/deploy demo
+$ bin/deploy --profile=demo
 ```
 
 ### Deletion
 
 ```
-$ bin/delete demo
+$ bin/deploy --action=delete-stack --profile=demo
 ```
 
