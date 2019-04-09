@@ -1,0 +1,34 @@
+AWSTemplateFormatVersion: "2010-09-09"
+Description: "{{ .Chart.Name }}"
+Parameters:
+  KeyName:
+    Description: KeyPair Name
+    Type: AWS::EC2::KeyPair::KeyName
+    Default: {{ .Values.key_name }}
+  InstanceType:
+    Description: EC2 Instance Type
+    Type: String
+    Default: {{ .Values.instance_type }}
+  SecurityGroup:
+    Description: EC2 Security Group
+    Type: String
+    Default: {{ .Values.security_group }}
+Resources: 
+  Ec2Instance:
+    Type: AWS::EC2::Instance
+    Properties:
+      ImageId: !FindInMap [AWSRegionArch2AMI, !Ref 'AWS::Region', !FindInMap [AWSInstanceType2Arch, !Ref InstanceType, Arch]]
+      KeyName: 
+        Ref: KeyName 
+      InstanceType:
+        Ref: InstanceType
+      SecurityGroups:
+        - Ref: SecurityGroup
+      BlockDeviceMappings:
+      - DeviceName: /dev/sda1
+        Ebs: { VolumeSize: "50" }
+      - DeviceName: /dev/sdm
+        Ebs: { VolumeSize: "100" }
+
+
+

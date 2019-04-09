@@ -4,15 +4,17 @@ set -e -u -o pipefail
 
 cd "$( dirname "${BASH_SOURCE[0]}" )/.."
 
+which yq > /dev/null # Check if yq is in PATH
+
 usage() {
   [[ "${1:-}" != '' ]] && echo "$@"
   cat <<EOF
 USAGE: $0 [--profile=PROFILE] [--action=ACTION]
 
 PROFILE must match a YAML file in values/ - defaults to "demo"
-ACTION is a cloudformation action - default is "deploy"
+ACTION is a cloudformation action - valid values are "create" and ""
 EOF
-  exit "{$2:-1}"
+  exit "${2:-1}"
 }
 
 # Gets the value of the next option in $@, fails if an additional shift is needed
@@ -23,10 +25,11 @@ opt() {
 }
 
 profile='demo'
-action='deploy'
+action='create'
 while [[ $# -gt 0 ]]; do case "$1" in
   -p*|--profile*) profile="$(opt "$@")" || shift;;
   -a*|--action*)  action="$(opt "$@")" || shift;;
+  -d|--debug)     set -x;;
   -h|--help)      usage '' 0;;
   *)              usage "Unknown option $1" 1;;
 esac; shift; done
@@ -36,16 +39,29 @@ if ! [[ -e "$values_yaml" ]]; then
   usage "Unable to find values file $values_yaml for profile $profile" 2
 fi
 
-pem_file="$(yq -c -r -M .key_name).pem"
+pem_file="$(yq -c -r -M .key_name $values_yaml).pem"
 if ! [[ -e "$pem_file" ]]; then
   usage "Unable to find pem file $(pwd)/$pem_file" 3
 fi
 
 eval $(ssh-agent)
-ssh-add "$pem"
+cat "$pem_file" | ssh-add - # Avoids perms issues on keyfils
 
-tmpdir=$(mktmp -d)
-helm template -f "$yalues_yaml" --output-dir "$tmpdir" chart/
+tmpdir=$(mktemp -d)
+echo "Writing to $tmpdir"
 
+# Generate YAML from template into temp dir
+helm template -f "$values_yaml" --output-dir "$tmpdir" chart/
 
+template="$tmpdir/cloudformation-helm-demo/templates/ec2_cf.yaml"
+
+cat "$template"
+
+aws cloudformation validate-template --template-body "$template"
+
+# Apply generated template as AWS cloudformation
+aws cloudformation $action-stack --template-body "$template" --stack-name "$profile"
+
+# Cleanup
+#rm -rf $tmdir
 
