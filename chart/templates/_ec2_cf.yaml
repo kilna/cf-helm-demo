@@ -1,0 +1,22 @@
+---
+Ec2Instance:
+  Type: AWS::EC2::Instance
+  Properties:
+    ImageId: !FindInMap [AWSRegionArch2AMI, !Ref 'AWS::Region', !FindInMap [AWSInstanceType2Arch, !Ref InstanceType, Arch]]
+    KeyName: {{ .Values.key_name }}
+    InstanceType: {{ .Values.instance_type }}
+{{- if .Values.security_groups }}
+    SecurityGroups:
+{{- range .Values.security_groups }}
+    - {{ . }}
+{{- end }}
+{{- end }}
+{{- if .Values.block_device_mappings }}
+    BlockDeviceMappings:
+{{- range .Values.block_device_mappings }}
+    - DeviceName: "/dev/{{ .Values.device_name }}"
+      Ebs:
+        VolumeSize: '{{ .Values.volume_size }}'
+{{- end }}
+{{- end }}
+
